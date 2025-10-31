@@ -1,12 +1,10 @@
 # Changelog
 
-
 ## v1.1.1
 
-[compare changes](https://undefined/undefined/compare/v1.1.0...v1.1.1)
+[compare changes](https://github.com/laioutr/app-klaviyo/compare/v1.1.1...v1.1.1)
 
 ## v1.1.0
-
 
 ### 🚀 Enhancements
 
@@ -16,4 +14,3 @@
 ### ❤️ Contributors
 
 - Sebastian Langer <sebastian.langer@laioutr.com>
-

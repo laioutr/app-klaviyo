@@ -2,7 +2,7 @@
   "name": "@laioutr/app-klaviyo",
   "version": "1.1.1",
   "description": "Integrate Klaviyo into your Laioutr project",
-  "repository": "your-org/@laioutr/app-klaviyo",
+  "repository": "laioutr/app-klaviyo",
   "license": "MIT",
   "type": "module",
   "exports": {
