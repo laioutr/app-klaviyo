@@ -1,6 +1,6 @@
 {
   "name": "@laioutr/app-klaviyo",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Integrate Klaviyo into your Laioutr project",
   "repository": "your-org/@laioutr/app-klaviyo",
   "license": "MIT",
@@ -30,7 +30,7 @@
     "orchestr-dev": "npm run orchestr-dev:prepare && nuxi dev orchestr-playground",
     "orchestr-dev:prepare": "nuxt-module-build build --stub && nuxt-module-build prepare && nuxi prepare orchestr-playground",
     "prepack": "nuxt-module-build build",
-    "release": "npm run lint && npm run test && npm run prepack && changelogen --release && npm publish && git push --follow-tags",
+    "release": "npm run lint && npm run test && npm run prepack && changelogen --release && npm publish --access public && git push --follow-tags",
     "test": "vitest run",
     "test:types": "vue-tsc --noEmit && cd playground && vue-tsc --noEmit",
     "test:watch": "vitest watch"
