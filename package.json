@@ -1,6 +1,6 @@
 {
   "name": "@laioutr/app-klaviyo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Integrate Klaviyo into your Laioutr project",
   "repository": "your-org/@laioutr/app-klaviyo",
   "license": "MIT",
