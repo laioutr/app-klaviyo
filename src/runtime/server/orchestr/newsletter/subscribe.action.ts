@@ -6,7 +6,7 @@ export default defineKlaviyoAction(SubscribeAction, async ({ input, context }) =
 
   const { klaviyoClient, defaultNewsletterListId } = context;
 
-  await klaviyoClient.createClientSubscription({
+  await klaviyoClient.subscribeToNewsletter({
     listId: listId ?? defaultNewsletterListId,
     source,
     profile: {

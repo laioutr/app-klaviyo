@@ -13,7 +13,7 @@ export interface CreateClientSubscriptionPayload {
   listId: string;
   source?: string;
   profile: {
-    email?: string;
+    email: string;
     phone?: string;
     firstName?: string;
     lastName?: string;
@@ -23,6 +23,19 @@ export interface CreateClientSubscriptionPayload {
   };
 }
 
-export interface ErrorResponse {
-  errors?: Array<{ id: string; status: number; code: string; detail: string; title: string }>;
+export interface KlaviyoError {
+  id: string;
+  status?: number;
+  code: string;
+  detail: string;
+  title: string;
+  source?: {
+    pointer?: string;
+    parameter?: string;
+  };
+}
+
+export interface KlavyioResponse<T = unknown> {
+  data?: T;
+  errors?: KlaviyoError[];
 }

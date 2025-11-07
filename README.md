@@ -15,7 +15,9 @@ See [laioutr.com](https://laioutr.com) for more information about Laioutr.
 
 ## Features
 
-- Newsletter registration actions
+Implements the following canonical actions:
+
+- [`newsletter/subscribe`](https://docs.laioutr.io/canonical-types/newsletter/canonical-actions) Newsletter registration action
 
 ## Quick Setup
 
