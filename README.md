@@ -41,6 +41,8 @@ To publish a new version, run `pnpm release`. This will:
 - Publish the package to npmjs.org
 - Push the changes to the repository
 
+Then run `LAIOUTR_API_KEY=<key> npx @laioutr/cli app release` in this folder, with a key that has the `app:publish` scope. This gives the Cockpit the settings form in `laioutr.manifest.json`. Every published version needs this step.
+
 ## Contribution
 
 Follow the [setup guide](https://docs.laioutr.io/developer-guide/setup) to get started.

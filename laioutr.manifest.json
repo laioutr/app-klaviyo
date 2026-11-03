@@ -2,7 +2,8 @@
   "configSettings": {
     "placement": "environment",
     "menu": {
-      "label": "Klaviyo"
+      "label": "Klaviyo",
+      "icon": "LuMail"
     },
     "sections": [
       {
