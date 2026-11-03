@@ -4,6 +4,7 @@
   "description": "Integrate Klaviyo into your Laioutr project",
   "repository": "laioutr/app-klaviyo",
   "license": "MIT",
+  "packageManager": "pnpm@10.11.1",
   "type": "module",
   "exports": {
     ".": {
@@ -20,7 +21,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "laioutr.manifest.json"
   ],
   "scripts": {
     "dev": "npm run dev:prepare && nuxi dev playground",
