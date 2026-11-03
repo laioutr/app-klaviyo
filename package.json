@@ -20,7 +20,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "laioutr.manifest.json"
   ],
   "scripts": {
     "dev": "npm run dev:prepare && nuxi dev playground",
