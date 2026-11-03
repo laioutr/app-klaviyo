@@ -33,6 +33,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # The playground imports ../laioutrrc.json, a project's own config that is never committed.
+      - name: Create a placeholder laioutrrc.json
+        run: echo '{"laioutr":{"projectSecretKey":false},"apps":[],"markets":{},"languages":{}}' > laioutrrc.json
+
+      # tsconfig.json extends ./.nuxt/tsconfig.json, which this generates; without it every import is unresolved.
+      - name: Prepare
+        run: pnpm run dev:prepare
+
       - name: Lint
         run: pnpm run lint
 
@@ -59,6 +67,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install
+
+      # The playground imports ../laioutrrc.json, a project's own config that is never committed.
+      - name: Create a placeholder laioutrrc.json
+        run: echo '{"laioutr":{"projectSecretKey":false},"apps":[],"markets":{},"languages":{}}' > laioutrrc.json
 
       - name: Playground prepare
         run: pnpm run dev:prepare
