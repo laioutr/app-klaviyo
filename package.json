@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "@nuxt/kit": "3.16.2",
+    "@screeny05/ts-money": "1.1.0",
     "defu": "6.1.4"
   },
   "peerDependencies": {
