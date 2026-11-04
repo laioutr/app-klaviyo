@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/no-empty-object-type */
-import { createResolver, defineNuxtModule, installModule } from '@nuxt/kit';
+import { addPlugin, createResolver, defineNuxtModule, installModule } from '@nuxt/kit';
 import { defu } from 'defu';
 import { registerLaioutrApp } from '@laioutr-core/kit';
 import { name, version } from '../package.json';
@@ -11,12 +10,21 @@ export interface ModuleOptions {
   baseURL?: string;
   companyId: string;
   defaultNewsletterListId: string;
+  /** Load Klaviyo's script for visitors who accept marketing cookies. Newsletter sign-ups work either way. */
+  onsiteTracking?: boolean;
+  /** Send Started Checkout from the storefront, for shops whose Klaviyo integration does not sync it. */
+  sendStartedCheckout?: boolean;
 }
 
 /**
  * The config the module adds to nuxt.runtimeConfig.public['@laioutr/app-klaviyo']
  */
-export interface RuntimeConfigModulePublic {}
+export interface RuntimeConfigModulePublic {
+  /** Klaviyo's public API key, so it is safe in the browser. */
+  companyId: string;
+  onsiteTracking: boolean;
+  sendStartedCheckout: boolean;
+}
 
 /**
  * The config the module adds to nuxt.runtimeConfig['@laioutr/app-klaviyo']
@@ -36,6 +44,8 @@ export default defineNuxtModule<ModuleOptions>({
   // Default configuration options of the Nuxt module
   defaults: {
     baseURL: 'https://a.klaviyo.com',
+    onsiteTracking: true,
+    sendStartedCheckout: false,
   },
   async setup(options, nuxt) {
     const { resolve } = createResolver(import.meta.url);
@@ -45,6 +55,12 @@ export default defineNuxtModule<ModuleOptions>({
 
     // Runtime configuration for this module
     nuxt.options.runtimeConfig[name] = defu(nuxt.options.runtimeConfig[name] as Parameters<typeof defu>[0], options);
+    nuxt.options.runtimeConfig.public[name] = defu(nuxt.options.runtimeConfig.public[name] as Parameters<typeof defu>[0], {
+      // Empty, not undefined, so the generated config type stays a string. The plugin treats it as missing.
+      companyId: options.companyId ?? '',
+      onsiteTracking: options.onsiteTracking ?? true,
+      sendStartedCheckout: options.sendStartedCheckout ?? false,
+    } satisfies RuntimeConfigModulePublic);
 
     await registerLaioutrApp({
       name,
@@ -65,7 +81,7 @@ export default defineNuxtModule<ModuleOptions>({
     // Imports and other stuff which is shared between client and server
 
     // Client
-    // Add plugins, composables, etc.
+    addPlugin({ src: resolveRuntimeModule('app/plugins/klaviyo.client'), mode: 'client' });
 
     // Server
     // Add server-only imports, etc.
