@@ -52,14 +52,18 @@ interface CartEntity {
   links: Record<string, { entities: CartLineEntity[] } | undefined>;
 }
 
-/** An address the event can do without must never cost the event, so a bad link is simply left out. */
+/**
+ * An address the event can do without must never cost the event, so a bad link is simply left out.
+ * That includes an in-page `#` fallback, which is what `linkResolver.resolve` returns for a link it
+ * cannot resolve, and which would otherwise reach an email as a working-looking URL.
+ */
 const toAbsoluteUrl = (link: Link | undefined, resolveLink: CartFetchDeps['resolveLink'], origin: string): string | undefined => {
   if (!link) {
     return undefined;
   }
   try {
     const resolved = resolveLink(link);
-    return resolved ? new URL(resolved, origin).href : undefined;
+    return resolved && !resolved.startsWith('#') ? new URL(resolved, origin).href : undefined;
   } catch {
     return undefined;
   }

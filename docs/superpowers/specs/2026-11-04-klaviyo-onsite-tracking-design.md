@@ -157,7 +157,7 @@ Core's `AddToCart` event carries only the added items. The whole cart is not add
 - The product page and product tile do not hold the cart, so storefronts without Klaviyo would pay for a fetch or need a new shared cart store.
 - The rules in `.claude/skills/adding-event-tokens/SKILL.md` keep a single vendor's needs out of canonical events until others want the same thing.
 
-Instead `klaviyoCart.ts` runs the query the cart sheet uses, under its own query ID (`klaviyo-cart`): `invalidateQuery`, `executeQueries`, then `getClientQueryResult`. It requests `CartBase` and `CartCost`, plus `CartItemBase` and `CartItemCost` on `CartItemsLink`. Only lines with `base.type === 'product'` become `Items`. `checkoutLink` goes through `linkResolver.resolve` and becomes absolute against `window.location.origin`.
+Instead `klaviyoCart.ts` runs the query the cart sheet uses, under its own query ID (`klaviyo-cart`): `invalidateQuery`, `executeQueries`, then `getClientQueryResult`. It requests `CartBase` and `CartCost`, plus `CartItemBase` and `CartItemCost` on `CartItemsLink`. Only lines with `base.type === 'product'` become `Items`. Links go through `linkResolver.resolveOrThrow(link, { withOrigin: true })`, as core's `entityAddressOf` does, so an unresolvable link is left out instead of becoming the in-page `#unknown-route` fallback that `resolve` returns.
 
 **Settle wait.** The cart sheet fires `AddToCart` about 500 ms before it saves a quantity change. The destination therefore waits 800 ms before fetching on `AddToCart`. `BeginCheckout` fetches without a wait, because the cart is not changing.
 

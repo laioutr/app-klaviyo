@@ -21,7 +21,7 @@ export default defineNuxtPlugin({
         fetchCart({
           orchestr: nuxtApp.runWithContext(() => useOrchestrStore()) as any,
           origin: window.location.origin,
-          resolveLink: (link) => nuxtApp.runWithContext(() => linkResolver.resolve(link)) as string,
+          resolveLink: (link) => nuxtApp.runWithContext(() => linkResolver.resolveOrThrow(link, { withOrigin: true })) as string,
         }),
       fetchCustomer: () => nuxtApp.runWithContext(() => fetchAction(CustomerGetCurrentAction)) as Promise<any>,
       register: (config) => analytics.register(defineAnalyticsDestination(config)),

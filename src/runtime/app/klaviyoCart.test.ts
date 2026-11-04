@@ -67,6 +67,7 @@ describe('mapCart', () => {
       },
     ],
     ['returns nothing', () => ''],
+    ['returns its in-page fallback', () => '#unknown-route?pageType=checkout'],
   ])('leaves out a link when the resolver %s', (_name, resolver) => {
     const lines = [line({ type: 'product', quantity: 1, title: 'Tee', code: 'X', link: { type: 'url', href: 'x' } })];
     const cart = mapCart(entity(lines, { type: 'url', href: 'x' }), resolver as any, origin);
