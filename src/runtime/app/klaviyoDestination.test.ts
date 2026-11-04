@@ -18,11 +18,15 @@ const makeDeps = (overrides = {}) => {
     trackViewedItem: vi.fn(() => new Promise(() => {})),
     identify: vi.fn(() => new Promise(() => {})),
   };
+  let loaded = false;
   return {
     client,
     deps: {
       sendStartedCheckout: false,
-      load: vi.fn(),
+      load: vi.fn(() => {
+        loaded = true;
+      }),
+      isLoaded: () => loaded,
       klaviyo: () => client,
       fetchCart: vi.fn(async () => cart),
       fetchCustomer: vi.fn(async () => {
@@ -268,6 +272,15 @@ describe('startKlaviyoTracking', () => {
     const { client, finish } = start(on);
     finish(args);
     expect(client.identify).not.toHaveBeenCalled();
+  });
+
+  it('clears and reloads on withdrawal when a signup loaded the script', async () => {
+    const { full, finish } = start(on);
+    finish(signup);
+    full.hasConsent.mockReturnValue(false);
+    await full.register.mock.calls[0]![0].teardown();
+    expect(full.clearCookies).toHaveBeenCalledOnce();
+    expect(full.reload).toHaveBeenCalledOnce();
   });
 
   it('does not identify a signup without consent', () => {

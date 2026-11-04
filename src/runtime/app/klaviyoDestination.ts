@@ -19,6 +19,7 @@ export interface CurrentCustomer {
 export interface KlaviyoDestinationDeps {
   sendStartedCheckout: boolean;
   load(): void;
+  isLoaded(): boolean;
   klaviyo(): KlaviyoClient;
   fetchCart(): Promise<KlaviyoCart | undefined>;
   fetchCustomer(): Promise<{ customer: CurrentCustomer }>;
@@ -41,7 +42,6 @@ const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resol
  * this destination's queue.
  */
 export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoDestinationConfig => {
-  let loaded = false;
   let lastViewedProductId: unknown;
 
   const identifyCustomer = async () => {
@@ -97,7 +97,6 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
     consent: { purposes: ['advertising'] },
     async init() {
       deps.load();
-      loaded = true;
       // Not awaited: identification must not hold back the visitor's first events.
       identifyCustomer();
     },
@@ -122,7 +121,7 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
     },
     /** Klaviyo documents that a loaded tracker only stops on reload. The bus won't load it again. */
     teardown() {
-      if (!loaded || deps.hasConsent()) {
+      if (!deps.isLoaded() || deps.hasConsent()) {
         return;
       }
       deps.clearCookies();
@@ -144,7 +143,7 @@ export interface ActionFinished {
   error?: unknown;
 }
 
-export interface KlaviyoTrackingDeps extends Omit<KlaviyoDestinationDeps, 'sendStartedCheckout' | 'load'> {
+export interface KlaviyoTrackingDeps extends Omit<KlaviyoDestinationDeps, 'sendStartedCheckout' | 'load' | 'isLoaded'> {
   load(companyId: string): void;
   register(config: KlaviyoDestinationConfig): void;
   onActionFinished(handler: (args: ActionFinished) => void): void;
@@ -163,9 +162,17 @@ export const startKlaviyoTracking = (config: KlaviyoTrackingConfig, deps: Klaviy
     return;
   }
 
-  const load = () => deps.load(companyId);
+  // Owned here because `init` and a newsletter signup can both load the script, and withdrawal has
+  // to stop it either way.
+  let loaded = false;
+  const load = () => {
+    deps.load(companyId);
+    loaded = true;
+  };
 
-  deps.register(createKlaviyoDestination({ ...deps, load, sendStartedCheckout: config.sendStartedCheckout ?? false }));
+  deps.register(
+    createKlaviyoDestination({ ...deps, load, isLoaded: () => loaded, sendStartedCheckout: config.sendStartedCheckout ?? false })
+  );
 
   // `SubscribeAction` runs on the server, so this is the only moment the browser learns who signed up.
   deps.onActionFinished(({ token, input, output, error }) => {
