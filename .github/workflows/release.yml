@@ -43,9 +43,16 @@ jobs:
       - name: Prepare
         run: pnpm run dev:prepare
 
+      # Publishing is final, so a missing key has to stop the job before it.
+      - name: Require the Cockpit key
+        env:
+          LAIOUTR_APP_PUBLISH_KEY: ${{ secrets.LAIOUTR_APP_PUBLISH_KEY }}
+        run: '[ -n "$LAIOUTR_APP_PUBLISH_KEY" ] || { echo "::error::Add the repository secret LAIOUTR_APP_PUBLISH_KEY, a key with the app:publish scope"; exit 1; }'
+
       # Opens/updates a "Version Packages" PR while changesets are pending.
       # When that PR is merged, runs `pnpm release` to build + publish to npmjs.org.
       - name: Create Release PR or publish
+        id: changesets
         uses: changesets/action@v1
         with:
           version: pnpm changeset version
@@ -55,3 +62,16 @@ jobs:
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # npmjs does not hand laioutr.manifest.json to the Cockpit, so every published version sends it.
+      # The Cockpit refuses a version npmjs does not serve yet, which can take a moment after publishing.
+      - name: Send the manifest to the Cockpit
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          LAIOUTR_APP_PUBLISH_KEY: ${{ secrets.LAIOUTR_APP_PUBLISH_KEY }}
+        run: |
+          for attempt in 1 2 3; do
+            pnpm run release:cockpit && exit 0
+            sleep 30
+          done
+          exit 1

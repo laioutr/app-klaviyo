@@ -34,14 +34,12 @@ You can find a thorough guide on getting started with Laioutr development in our
 
 ## Publishing
 
-To publish a new version, run `pnpm release`. This will:
+Add a changeset to your change with `pnpm changeset`. Once it reaches `main`, the release workflow opens a `chore: release` pull request. Merging that pull request will:
 
-- Run the tests
-- Update the changelog
 - Publish the package to npmjs.org
-- Push the changes to the repository
+- Send the version and its `laioutr.manifest.json` to the Cockpit with `laioutr app release`, which gives the Cockpit the settings form
 
-Then run `LAIOUTR_API_KEY=<key> npx @laioutr/cli app release` in this folder, with a key that has the `app:publish` scope. This gives the Cockpit the settings form in `laioutr.manifest.json`. Every published version needs this step.
+The workflow needs the repository secret `LAIOUTR_APP_PUBLISH_KEY`, a key with the `app:publish` scope. If the last step fails, the version is already published and re-running the workflow will not send it again. Fix the problem, then run `LAIOUTR_APP_PUBLISH_KEY=<key> pnpm release:cockpit` on the released commit.
 
 ## Contribution
 

@@ -6,7 +6,7 @@ export default defineNuxtConfig({
     '@pinia/nuxt', // Added to show in devtools
     '@laioutr-core/frontend-core',
     '@laioutr-core/orchestr',
-    '@laioutr-core/orchestr-devtools',
+    '@laioutr-core/devtools',
   ],
   i18n: {
     bundle: {
