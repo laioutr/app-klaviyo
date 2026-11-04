@@ -126,7 +126,8 @@ export const mapViewedProduct = (payload: {
 const addedItemPrice = ({ products, value }: { products: EventProduct[]; value: MoneyLike }): number | undefined => {
   const added = products[0];
   if (products.length === 1 && added?.quantity && added.quantity > 0) {
-    return toMajor(value) / added.quantity;
+    // In minor units, because dividing decimals drifts: 0.15 / 3 is 0.049999999999999996.
+    return toMajor({ amount: Math.round(value.amount / added.quantity), currency: value.currency });
   }
   return toMajorOptional(added?.price);
 };

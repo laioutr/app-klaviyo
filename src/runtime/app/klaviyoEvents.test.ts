@@ -137,6 +137,10 @@ describe('mapAddedToCart', () => {
     expect(mapAddedToCart(input).AddedItemPrice).toBe(19.99);
   });
 
+  it('divides in minor units, so the price carries no float drift', () => {
+    expect(mapAddedToCart({ products: [{ ...tee, quantity: 3 }], value: eur(15) }).AddedItemPrice).toBe(0.05);
+  });
+
   it('survives an event with no products', () => {
     expect(mapAddedToCart({ products: [], value: eur(100) })).toStrictEqual({ $value: 1 });
   });
