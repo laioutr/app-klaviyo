@@ -4,7 +4,10 @@ import { CART_FETCH_TIMEOUT_MS, fetchCart, KLAVIYO_CART_QUERY, mapCart } from '.
 const eur = (amount: number) => ({ amount, currency: 'EUR' });
 const line = (base: object, single = 1999, total = 3998) => ({ components: { base, cost: { single: eur(single), total: eur(total) } } });
 const productLine = line({
-  type: 'product', quantity: 2, title: 'Tee', code: 'TEE-M',
+  type: 'product',
+  quantity: 2,
+  title: 'Tee',
+  code: 'TEE-M',
   link: { type: 'reference', reference: { type: 'Product', id: 'gid://shopify/Product/123' } },
   cover: { sources: [{ src: 'https://cdn.test/tee.jpg' }] },
 });
@@ -19,15 +22,27 @@ describe('mapCart', () => {
   it('maps product lines, the total and an absolute product URL', () => {
     expect(mapCart(entity([productLine]), resolveLink, origin)).toStrictEqual({
       value: 39.98,
-      items: [{
-        ProductID: '123', SKU: 'TEE-M', ProductName: 'Tee', Quantity: 2, ItemPrice: 19.99, RowTotal: 39.98,
-        ProductURL: 'https://shop.test/p/tee', ImageURL: 'https://cdn.test/tee.jpg',
-      }],
+      items: [
+        {
+          ProductID: '123',
+          SKU: 'TEE-M',
+          ProductName: 'Tee',
+          Quantity: 2,
+          ItemPrice: 19.99,
+          RowTotal: 39.98,
+          ProductURL: 'https://shop.test/p/tee',
+          ImageURL: 'https://cdn.test/tee.jpg',
+        },
+      ],
     });
   });
 
   it('excludes discount-code and custom lines', () => {
-    const lines = [productLine, line({ type: 'discount-code', quantity: 1, title: 'SAVE10' }), line({ type: 'custom', quantity: 1, title: 'Gift wrap' })];
+    const lines = [
+      productLine,
+      line({ type: 'discount-code', quantity: 1, title: 'SAVE10' }),
+      line({ type: 'custom', quantity: 1, title: 'Gift wrap' }),
+    ];
     expect(mapCart(entity(lines), resolveLink, origin).items).toHaveLength(1);
   });
 
@@ -45,7 +60,12 @@ describe('mapCart', () => {
   });
 
   it.each([
-    ['throws', () => { throw new Error('unresolvable'); }],
+    [
+      'throws',
+      () => {
+        throw new Error('unresolvable');
+      },
+    ],
     ['returns nothing', () => ''],
   ])('leaves out a link when the resolver %s', (_name, resolver) => {
     const lines = [line({ type: 'product', quantity: 1, title: 'Tee', code: 'X', link: { type: 'url', href: 'x' } })];
@@ -64,7 +84,9 @@ describe('fetchCart', () => {
     resolveLink.mockImplementation((link: any) => (link.type === 'url' ? link.href : '/p/tee'));
     orchestr.executeQueries.mockResolvedValue(undefined);
   });
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('uses its own query id and refetches', async () => {
     orchestr.getClientQueryResult.mockReturnValue({ status: 'ok', entities: [entity([productLine])] });

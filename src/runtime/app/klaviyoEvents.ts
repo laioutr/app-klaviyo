@@ -131,10 +131,7 @@ const addedItemPrice = ({ products, value }: { products: EventProduct[]; value: 
   return toMajorOptional(added?.price);
 };
 
-export const mapAddedToCart = (
-  payload: { products: EventProduct[]; value: MoneyLike },
-  cart?: KlaviyoCart
-): Record<string, unknown> => {
+export const mapAddedToCart = (payload: { products: EventProduct[]; value: MoneyLike }, cart?: KlaviyoCart): Record<string, unknown> => {
   const added = payload.products[0];
   // No product lines means the add has not landed yet, so the cart would understate the event.
   const cartItems = cart?.items.length ? cart.items : undefined;

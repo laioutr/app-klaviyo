@@ -1,9 +1,9 @@
+import { compact, type KlaviyoCart, mapAddedToCart, mapStartedCheckout, mapViewedProduct } from './klaviyoEvents';
 import { AddToCart, BeginCheckout, ViewItem } from '@laioutr-core/canonical-types/analytics';
 import { SubscribeAction } from '@laioutr-core/canonical-types/newsletter';
-import type { AnalyticsEvent } from '@laioutr-core/core-types/analytics';
-import type { AnalyticsDestination } from '#imports';
-import { compact, mapAddedToCart, mapStartedCheckout, mapViewedProduct, type KlaviyoCart } from './klaviyoEvents';
+import type { defineAnalyticsDestination } from '#imports';
 import type { KlaviyoClient } from './klaviyoScript';
+import type { AnalyticsEvent } from '@laioutr-core/core-types/analytics';
 
 /**
  * The cart sheet fires `AddToCart` about 500 ms before it saves a quantity change, so a cart fetched
@@ -27,7 +27,7 @@ export interface KlaviyoDestinationDeps {
   reload(): void;
 }
 
-export type KlaviyoDestinationConfig = Omit<AnalyticsDestination, 'stage'>;
+export type KlaviyoDestinationConfig = Parameters<typeof defineAnalyticsDestination>[0];
 
 type ViewedPayload = Parameters<typeof mapViewedProduct>[0];
 type CartPayload = Parameters<typeof mapAddedToCart>[0];
@@ -48,7 +48,9 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
     try {
       const { customer } = await deps.fetchCustomer();
       if (customer.email && deps.hasConsent()) {
-        deps.klaviyo().identify(compact({ email: customer.email, first_name: customer.person?.firstName, last_name: customer.person?.lastName }));
+        deps
+          .klaviyo()
+          .identify(compact({ email: customer.email, first_name: customer.person?.firstName, last_name: customer.person?.lastName }));
       }
     } catch {
       // The action rejects for a visitor without a session, which is the ordinary case.
@@ -97,7 +99,7 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
       deps.load();
       loaded = true;
       // Not awaited: identification must not hold back the visitor's first events.
-      void identifyCustomer();
+      identifyCustomer();
     },
     async track(event) {
       switch (event.type) {
@@ -113,7 +115,9 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
           await trackStartedCheckout(event);
           break;
         }
-        // Everything else only serves to trigger `init`.
+        default: {
+          // Everything else only serves to trigger `init`.
+        }
       }
     },
     /** Klaviyo documents that a loaded tracker only stops on reload. The bus won't load it again. */

@@ -1,7 +1,7 @@
-import { AddToCart, BeginCheckout, ViewItem } from '@laioutr-core/canonical-types/analytics';
-import { SubscribeAction } from '@laioutr-core/canonical-types/newsletter';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ADD_TO_CART_SETTLE_MS, createKlaviyoDestination, startKlaviyoTracking } from './klaviyoDestination';
+import { AddToCart, BeginCheckout, ViewItem } from '@laioutr-core/canonical-types/analytics';
+import { SubscribeAction } from '@laioutr-core/canonical-types/newsletter';
 
 const eur = (amount: number) => ({ amount, currency: 'EUR' });
 const event = (type: string, payload: object, id = 'evt-1') =>
@@ -25,7 +25,9 @@ const makeDeps = (overrides = {}) => {
       load: vi.fn(),
       klaviyo: () => client,
       fetchCart: vi.fn(async () => cart),
-      fetchCustomer: vi.fn(async () => { throw new Error('unauthenticated'); }),
+      fetchCustomer: vi.fn(async () => {
+        throw new Error('unauthenticated');
+      }),
       hasConsent: vi.fn(() => true),
       clearCookies: vi.fn(),
       reload: vi.fn(),
@@ -34,8 +36,12 @@ const makeDeps = (overrides = {}) => {
   };
 };
 
-beforeEach(() => { vi.useFakeTimers(); });
-afterEach(() => { vi.useRealTimers(); });
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('createKlaviyoDestination', () => {
   it('declares its id and consent, with no filter and no denied delivery', () => {
@@ -78,7 +84,10 @@ describe('createKlaviyoDestination', () => {
     expect(deps.fetchCart).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     await pending;
-    expect(client.track).toHaveBeenCalledWith('Added to Cart', expect.objectContaining({ $value: 59.97, Items: cart.items, CheckoutURL: cart.checkoutUrl }));
+    expect(client.track).toHaveBeenCalledWith(
+      'Added to Cart',
+      expect.objectContaining({ $value: 59.97, Items: cart.items, CheckoutURL: cart.checkoutUrl })
+    );
   });
 
   it('still sends the add when the cart is unavailable', async () => {
@@ -101,7 +110,10 @@ describe('createKlaviyoDestination', () => {
 
   it('drops the add when consent goes during the cart fetch', async () => {
     const { deps, client } = makeDeps();
-    deps.fetchCart.mockImplementation(async () => { deps.hasConsent.mockReturnValue(false); return cart; });
+    deps.fetchCart.mockImplementation(async () => {
+      deps.hasConsent.mockReturnValue(false);
+      return cart;
+    });
     const pending = createKlaviyoDestination(deps).track(add);
     await vi.advanceTimersByTimeAsync(ADD_TO_CART_SETTLE_MS);
     await pending;
@@ -118,7 +130,10 @@ describe('createKlaviyoDestination', () => {
   it('sends a checkout start without waiting when the setting is on', async () => {
     const { deps, client } = makeDeps({ sendStartedCheckout: true });
     await createKlaviyoDestination(deps).track(begin);
-    expect(client.track).toHaveBeenCalledWith('Started Checkout', expect.objectContaining({ $event_id: 'evt-9', $value: 19.99, CheckoutURL: cart.checkoutUrl }));
+    expect(client.track).toHaveBeenCalledWith(
+      'Started Checkout',
+      expect.objectContaining({ $event_id: 'evt-9', $value: 19.99, CheckoutURL: cart.checkoutUrl })
+    );
   });
 
   describe('init', () => {
@@ -149,7 +164,12 @@ describe('createKlaviyoDestination', () => {
     });
 
     it.each([
-      ['a guest', async () => { throw new Error('unauthenticated'); }],
+      [
+        'a guest',
+        async () => {
+          throw new Error('unauthenticated');
+        },
+      ],
       ['a customer without an email', async () => ({ customer: { person: { firstName: 'Ada' } } })],
     ])('does not identify %s', async (_name, fetchCustomer) => {
       const { deps, client } = makeDeps({ fetchCustomer: vi.fn(fetchCustomer) });
@@ -191,7 +211,14 @@ describe('startKlaviyoTracking', () => {
   const start = (config: object, overrides = {}) => {
     const { deps, client } = makeDeps(overrides);
     let handler: any;
-    const full = { ...deps, register: vi.fn(), warn: vi.fn(), onActionFinished: vi.fn((h: any) => { handler = h; }) };
+    const full = {
+      ...deps,
+      register: vi.fn(),
+      warn: vi.fn(),
+      onActionFinished: vi.fn((h: any) => {
+        handler = h;
+      }),
+    };
     startKlaviyoTracking(config, full);
     return { full, client, finish: (args: object) => handler?.(args) };
   };
@@ -205,11 +232,14 @@ describe('startKlaviyoTracking', () => {
     expect(full.warn).not.toHaveBeenCalled();
   });
 
-  it.each([[{ onsiteTracking: true }], [{ companyId: '   ', onsiteTracking: true }]])('warns and registers nothing without a company id: %j', (config) => {
-    const { full } = start(config);
-    expect(full.warn).toHaveBeenCalledOnce();
-    expect(full.register).not.toHaveBeenCalled();
-  });
+  it.each([[{ onsiteTracking: true }], [{ companyId: '   ', onsiteTracking: true }]])(
+    'warns and registers nothing without a company id: %j',
+    (config) => {
+      const { full } = start(config);
+      expect(full.warn).toHaveBeenCalledOnce();
+      expect(full.register).not.toHaveBeenCalled();
+    }
+  );
 
   it('registers the destination and loads with a trimmed company id', async () => {
     const { full } = start({ companyId: '  AbC123 ', onsiteTracking: true });

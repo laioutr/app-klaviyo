@@ -9,17 +9,30 @@ let cookieWrites: string[];
 let fakeWindow: any;
 
 beforeEach(() => {
-  appended = []; existing = null; selectors = []; cookieWrites = [];
+  appended = [];
+  existing = null;
+  selectors = [];
+  cookieWrites = [];
   fakeWindow = { location: { hostname: 'shop.example.com' } };
   vi.stubGlobal('window', fakeWindow);
   vi.stubGlobal('document', {
     createElement: () => ({}),
     head: { appendChild: (element: unknown) => appended.push(element) },
-    querySelector: (selector: string) => { selectors.push(selector); return existing ?? appended[0] ?? null; },
-    set cookie(value: string) { cookieWrites.push(value); },
+    querySelector: (selector: string) => {
+      selectors.push(selector);
+      return existing ?? appended[0] ?? null;
+    },
+    get cookie() {
+      return '';
+    },
+    set cookie(value: string) {
+      cookieWrites.push(value);
+    },
   });
 });
-afterEach(() => { vi.unstubAllGlobals(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('ensureKlaviyo', () => {
   it('inserts the async script with the company id', () => {

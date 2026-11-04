@@ -1,10 +1,10 @@
+import { compact, type KlaviyoCart, type KlaviyoItem, type MoneyLike, plainId, toMajor } from './klaviyoEvents';
 import { CartItemsLink, GetCurrentCartQuery } from '@laioutr-core/canonical-types/ecommerce';
 import { CartBase, CartCost } from '@laioutr-core/canonical-types/entity/cart';
 import { CartItemBase, CartItemCost } from '@laioutr-core/canonical-types/entity/cart-item';
 import { unwrapToken } from '@laioutr-core/core-types/orchestr';
-import type { Link } from '@laioutr-core/core-types/common';
 import type { QueryWireRequestQuery } from '#orchestr/types';
-import { compact, plainId, toMajor, type KlaviyoCart, type KlaviyoItem, type MoneyLike } from './klaviyoEvents';
+import type { Link } from '@laioutr-core/core-types/common';
 
 export const CART_FETCH_TIMEOUT_MS = 3000;
 

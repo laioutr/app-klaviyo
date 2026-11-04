@@ -3,16 +3,37 @@ import { mapAddedToCart, mapStartedCheckout, mapViewedProduct, plainId, toMajor 
 
 const eur = (amount: number) => ({ amount, currency: 'EUR' });
 const tee = {
-  productId: 'gid://shopify/Product/123', sku: 'TEE-M', name: 'Tee', brand: 'Acme',
-  price: eur(1999), listPrice: eur(2499), quantity: 2,
-  url: 'https://shop.test/p/tee', imageUrl: 'https://cdn.test/tee.jpg', category: ['Men', 'Shirts'],
+  productId: 'gid://shopify/Product/123',
+  sku: 'TEE-M',
+  name: 'Tee',
+  brand: 'Acme',
+  price: eur(1999),
+  listPrice: eur(2499),
+  quantity: 2,
+  url: 'https://shop.test/p/tee',
+  imageUrl: 'https://cdn.test/tee.jpg',
+  category: ['Men', 'Shirts'],
 };
 const cap = { productId: '456', name: 'Cap', price: eur(1999), quantity: 1, category: ['Men', 'Hats'] };
 const teeItem = {
-  ProductID: '123', SKU: 'TEE-M', ProductName: 'Tee', Quantity: 2, ItemPrice: 19.99, RowTotal: 39.98,
-  ProductURL: 'https://shop.test/p/tee', ImageURL: 'https://cdn.test/tee.jpg', ProductCategories: ['Men', 'Shirts'],
+  ProductID: '123',
+  SKU: 'TEE-M',
+  ProductName: 'Tee',
+  Quantity: 2,
+  ItemPrice: 19.99,
+  RowTotal: 39.98,
+  ProductURL: 'https://shop.test/p/tee',
+  ImageURL: 'https://cdn.test/tee.jpg',
+  ProductCategories: ['Men', 'Shirts'],
 };
-const capItem = { ProductID: '456', ProductName: 'Cap', Quantity: 1, ItemPrice: 19.99, RowTotal: 19.99, ProductCategories: ['Men', 'Hats'] };
+const capItem = {
+  ProductID: '456',
+  ProductName: 'Cap',
+  Quantity: 1,
+  ItemPrice: 19.99,
+  RowTotal: 19.99,
+  ProductCategories: ['Men', 'Hats'],
+};
 const cart = { value: 59.97, checkoutUrl: 'https://shop.test/checkout/abc', items: [teeItem, capItem] };
 
 describe('plainId', () => {
@@ -35,13 +56,22 @@ describe('mapViewedProduct', () => {
   it('maps every field', () => {
     expect(mapViewedProduct({ product: tee })).toStrictEqual({
       viewedProduct: {
-        ProductName: 'Tee', ProductID: '123', SKU: 'TEE-M', Categories: ['Men', 'Shirts'],
-        ImageURL: 'https://cdn.test/tee.jpg', URL: 'https://shop.test/p/tee', Brand: 'Acme',
-        Price: 19.99, CompareAtPrice: 24.99,
+        ProductName: 'Tee',
+        ProductID: '123',
+        SKU: 'TEE-M',
+        Categories: ['Men', 'Shirts'],
+        ImageURL: 'https://cdn.test/tee.jpg',
+        URL: 'https://shop.test/p/tee',
+        Brand: 'Acme',
+        Price: 19.99,
+        CompareAtPrice: 24.99,
       },
       viewedItem: {
-        Title: 'Tee', ItemId: '123', Categories: ['Men', 'Shirts'],
-        ImageUrl: 'https://cdn.test/tee.jpg', Url: 'https://shop.test/p/tee',
+        Title: 'Tee',
+        ItemId: '123',
+        Categories: ['Men', 'Shirts'],
+        ImageUrl: 'https://cdn.test/tee.jpg',
+        Url: 'https://shop.test/p/tee',
         Metadata: { Brand: 'Acme', Price: 19.99, CompareAtPrice: 24.99 },
       },
     });
@@ -67,10 +97,17 @@ describe('mapAddedToCart', () => {
   it('sends the whole cart', () => {
     expect(mapAddedToCart(payload, cart)).toStrictEqual({
       $value: 59.97,
-      AddedItemProductName: 'Tee', AddedItemProductID: '123', AddedItemSKU: 'TEE-M',
-      AddedItemCategories: ['Men', 'Shirts'], AddedItemImageURL: 'https://cdn.test/tee.jpg',
-      AddedItemURL: 'https://shop.test/p/tee', AddedItemPrice: 19.99, AddedItemQuantity: 2,
-      ItemNames: ['Tee', 'Cap'], CheckoutURL: 'https://shop.test/checkout/abc', Items: [teeItem, capItem],
+      AddedItemProductName: 'Tee',
+      AddedItemProductID: '123',
+      AddedItemSKU: 'TEE-M',
+      AddedItemCategories: ['Men', 'Shirts'],
+      AddedItemImageURL: 'https://cdn.test/tee.jpg',
+      AddedItemURL: 'https://shop.test/p/tee',
+      AddedItemPrice: 19.99,
+      AddedItemQuantity: 2,
+      ItemNames: ['Tee', 'Cap'],
+      CheckoutURL: 'https://shop.test/checkout/abc',
+      Items: [teeItem, capItem],
     });
   });
 
@@ -108,8 +145,12 @@ describe('mapAddedToCart', () => {
 describe('mapStartedCheckout', () => {
   it('maps the event, with unique categories', () => {
     expect(mapStartedCheckout('evt-1', { products: [tee, cap], value: eur(5997) }, 'https://shop.test/checkout')).toStrictEqual({
-      $event_id: 'evt-1', $value: 59.97, ItemNames: ['Tee', 'Cap'], Categories: ['Men', 'Shirts', 'Hats'],
-      CheckoutURL: 'https://shop.test/checkout', Items: [teeItem, capItem],
+      $event_id: 'evt-1',
+      $value: 59.97,
+      ItemNames: ['Tee', 'Cap'],
+      Categories: ['Men', 'Shirts', 'Hats'],
+      CheckoutURL: 'https://shop.test/checkout',
+      Items: [teeItem, capItem],
     });
   });
 
