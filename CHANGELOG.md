@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1
+
+### Patch Changes
+
+- 1275e1f: Registers the app with the Cockpit, so the Klaviyo settings appear under the environment's Configuration. The Cockpit refused the 1.3.0 release, so its settings never arrived. The code is unchanged.
+
 ## 1.3.0
 
 ### Minor Changes
