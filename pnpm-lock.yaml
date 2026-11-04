@@ -37,8 +37,8 @@ importers:
         specifier: ^0.78.0
         version: 0.78.0(magicast@0.3.5)
       '@laioutr/cli':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       '@laioutr/eslint-config':
         specifier: ^1.5.0
         version: 1.5.0(@typescript-eslint/eslint-plugin@8.46.2(@typescript-eslint/parser@8.46.2(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.2))(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.2))(@typescript-eslint/utils@8.46.2(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.46.2(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.38.0(jiti@2.6.1)))(jiti@2.6.1)
@@ -1209,8 +1209,8 @@ packages:
     peerDependencies:
       vite: ^4.0.0 || ^5.0.0 || ^6.0.0
 
-  '@laioutr/cli@0.6.0':
-    resolution: {integrity: sha512-e15492GpCCHhJ6cu9ACkzKFw5Xb3O5VEXeNw2gcHiDnZcxYWUXvtkYIlsFUvIqYD8e8emLEg060btYMNKkiV7A==}
+  '@laioutr/cli@0.6.1':
+    resolution: {integrity: sha512-7FVwGIzU3/Hx0XfR9z6uagTE9wYy9yCyd7oHs5KvgoDN5Ai3Kilns0p7HPhzL+35HAE8LYbnQbC0h74rnlAjVA==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -9741,7 +9741,7 @@ snapshots:
       - vue-router
       - webpack
 
-  '@laioutr/cli@0.6.0':
+  '@laioutr/cli@0.6.1':
     dependencies:
       '@oclif/core': 4.14.0
       '@oclif/plugin-help': 6.3.0

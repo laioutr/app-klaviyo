@@ -62,7 +62,7 @@
     "@laioutr-core/devtools": "^0.78.0",
     "@laioutr-core/frontend-core": "^0.78.0",
     "@laioutr-core/kit": "^0.78.0",
-    "@laioutr/cli": "^0.6.0",
+    "@laioutr/cli": "^0.6.1",
     "@laioutr/eslint-config": "^1.5.0",
     "@laioutr/logger": "^0.5.1",
     "@laioutr/prettier-config": "^1.1.0",
