@@ -45,8 +45,8 @@ A client-only plugin registers an analytics destination on core's bus, the patte
 
 | File | Responsibility |
 | --- | --- |
-| `src/runtime/app/plugins/klaviyo.client.ts` | Reads config, wires real dependencies, registers the destination, hooks `SubscribeAction`. The only file importing from `#imports`. |
-| `src/runtime/app/klaviyoDestination.ts` | The destination: `init`, `track`, `teardown`, and repeat-view skipping. Receives its dependencies as arguments. |
+| `src/runtime/app/plugins/klaviyo.client.ts` | Starts tracking with the module's public config. |
+| `src/runtime/app/klaviyoDestination.ts` | The destination: `init`, `track`, `teardown`, and repeat-view skipping. `startKlaviyoTracking` holds the config checks, the registration and the `SubscribeAction` hook. Calls its collaborators directly. |
 | `src/runtime/app/klaviyoEvents.ts` | Pure functions from canonical payloads to Klaviyo properties, including ID and money conversion. |
 | `src/runtime/app/klaviyoCart.ts` | Fetches the current cart through `GetCurrentCartQuery` and maps it to a plain object. |
 | `src/runtime/app/klaviyoScript.ts` | Queue snippet, script insertion, cookie clearing. |
@@ -212,7 +212,7 @@ README setup steps:
 
 ## Testing
 
-**Unit tests**, next to each file under `src/runtime/app/`. Dependencies are passed in, so these should not need a Nuxt environment. If they do, use `defineVitestConfig` as `app-gtm` does.
+**Unit tests**, next to each file under `src/runtime/app/`, in the Nuxt environment with `defineVitestConfig` and the playground as `rootDir`, as `app-gtm` does. They use the real consent store, analytics bus, orchestr store, link resolver and hook, as `.claude/rules/nuxt-testing-over-abstraction.md` requires. Only the absent server is replaced, through `registerEndpoint`. Happy DOM's script loading is off, so no test runs Klaviyo's real script or sends it anything.
 
 - Mapping for all three events, with absent fields left out.
 - ID stripping for gids, cart gids with `?key=`, and non-gid values.

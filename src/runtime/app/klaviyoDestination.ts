@@ -1,8 +1,18 @@
-import { compact, type KlaviyoCart, mapAddedToCart, mapStartedCheckout, mapViewedProduct } from './klaviyoEvents';
+import { fetchCart } from './klaviyoCart';
+import {
+  type AddToCartPayload,
+  type BeginCheckoutPayload,
+  compact,
+  mapAddedToCart,
+  mapStartedCheckout,
+  mapViewedProduct,
+  type ViewItemPayload,
+} from './klaviyoEvents';
+import { clearKlaviyoCookies, ensureKlaviyo, getKlaviyo, isKlaviyoLoaded } from './klaviyoScript';
+import { defineAnalyticsDestination, fetchAction, useAnalytics, useConsentStore, useNuxtApp } from '#imports';
 import { AddToCart, BeginCheckout, ViewItem } from '@laioutr-core/canonical-types/analytics';
+import { CustomerGetCurrentAction } from '@laioutr-core/canonical-types/ecommerce';
 import { SubscribeAction } from '@laioutr-core/canonical-types/newsletter';
-import type { defineAnalyticsDestination } from '#imports';
-import type { KlaviyoClient } from './klaviyoScript';
 import type { AnalyticsEvent } from '@laioutr-core/core-types/analytics';
 
 /**
@@ -11,27 +21,7 @@ import type { AnalyticsEvent } from '@laioutr-core/core-types/analytics';
  */
 export const ADD_TO_CART_SETTLE_MS = 800;
 
-export interface CurrentCustomer {
-  email?: string;
-  person?: { firstName?: string; lastName?: string };
-}
-
-export interface KlaviyoDestinationDeps {
-  sendStartedCheckout: boolean;
-  load(): void;
-  isLoaded(): boolean;
-  klaviyo(): KlaviyoClient;
-  fetchCart(): Promise<KlaviyoCart | undefined>;
-  fetchCustomer(): Promise<{ customer: CurrentCustomer }>;
-  hasConsent(): boolean;
-  clearCookies(): void;
-  reload(): void;
-}
-
-export type KlaviyoDestinationConfig = Parameters<typeof defineAnalyticsDestination>[0];
-
-type ViewedPayload = Parameters<typeof mapViewedProduct>[0];
-type CartPayload = Parameters<typeof mapAddedToCart>[0];
+const ADVERTISING = 'advertising';
 
 const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -41,16 +31,23 @@ const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resol
  * awaited or returned either: with a blocked script their promises never settle, which would stall
  * this destination's queue.
  */
-export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoDestinationConfig => {
+export const createKlaviyoDestination = (
+  companyId: string,
+  sendStartedCheckout: boolean
+): ReturnType<typeof defineAnalyticsDestination> => {
+  // Resolved at registration: the bus delivers through an async queue, and composables no longer
+  // resolve once an await has run.
+  const nuxt = useNuxtApp();
+  const consent = useConsentStore();
   let lastViewedProductId: unknown;
 
   const identifyCustomer = async () => {
     try {
-      const { customer } = await deps.fetchCustomer();
-      if (customer.email && deps.hasConsent()) {
-        deps
-          .klaviyo()
-          .identify(compact({ email: customer.email, first_name: customer.person?.firstName, last_name: customer.person?.lastName }));
+      const { customer } = await nuxt.runWithContext(() => fetchAction(CustomerGetCurrentAction));
+      if (customer.email && consent.hasPurposeConsent(ADVERTISING)) {
+        getKlaviyo().identify(
+          compact({ email: customer.email, first_name: customer.person?.firstName, last_name: customer.person?.lastName })
+        );
       }
     } catch {
       // The action rejects for a visitor without a session, which is the ordinary case.
@@ -58,45 +55,45 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
   };
 
   const trackViewedProduct = (event: AnalyticsEvent) => {
-    const { viewedProduct, viewedItem } = mapViewedProduct(event.payload as ViewedPayload);
+    const { viewedProduct, viewedItem } = mapViewedProduct(event.payload as ViewItemPayload);
     // Core re-fires this on every variant switch, which is one product to Klaviyo.
     if (viewedProduct.ProductID === lastViewedProductId) {
       return;
     }
     lastViewedProductId = viewedProduct.ProductID;
-    deps.klaviyo().track('Viewed Product', viewedProduct);
-    deps.klaviyo().trackViewedItem(viewedItem);
+    getKlaviyo().track('Viewed Product', viewedProduct);
+    getKlaviyo().trackViewedItem(viewedItem);
   };
 
   // The bus only checks consent before `track` starts, and the visitor can withdraw during either wait.
   const trackAddedToCart = async (event: AnalyticsEvent) => {
     await wait(ADD_TO_CART_SETTLE_MS);
-    if (!deps.hasConsent()) {
+    if (!consent.hasPurposeConsent(ADVERTISING)) {
       return;
     }
-    const cart = await deps.fetchCart();
-    if (!deps.hasConsent()) {
+    const cart = await nuxt.runWithContext(() => fetchCart());
+    if (!consent.hasPurposeConsent(ADVERTISING)) {
       return;
     }
-    deps.klaviyo().track('Added to Cart', mapAddedToCart(event.payload as CartPayload, cart));
+    getKlaviyo().track('Added to Cart', mapAddedToCart(event.payload as AddToCartPayload, cart));
   };
 
   const trackStartedCheckout = async (event: AnalyticsEvent) => {
-    if (!deps.sendStartedCheckout) {
+    if (!sendStartedCheckout) {
       return;
     }
-    const cart = await deps.fetchCart();
-    if (!deps.hasConsent()) {
+    const cart = await nuxt.runWithContext(() => fetchCart());
+    if (!consent.hasPurposeConsent(ADVERTISING)) {
       return;
     }
-    deps.klaviyo().track('Started Checkout', mapStartedCheckout(event.id, event.payload as CartPayload, cart?.checkoutUrl));
+    getKlaviyo().track('Started Checkout', mapStartedCheckout(event.id, event.payload as BeginCheckoutPayload, cart?.checkoutUrl));
   };
 
-  return {
+  return defineAnalyticsDestination({
     id: 'klaviyo',
-    consent: { purposes: ['advertising'] },
+    consent: { purposes: [ADVERTISING] },
     async init() {
-      deps.load();
+      ensureKlaviyo(companyId);
       // Not awaited: identification must not hold back the visitor's first events.
       identifyCustomer();
     },
@@ -121,13 +118,14 @@ export const createKlaviyoDestination = (deps: KlaviyoDestinationDeps): KlaviyoD
     },
     /** Klaviyo documents that a loaded tracker only stops on reload. The bus won't load it again. */
     teardown() {
-      if (!deps.isLoaded() || deps.hasConsent()) {
+      // The script can be there without `init` having run: a newsletter signup loads it too.
+      if (!isKlaviyoLoaded() || consent.hasPurposeConsent(ADVERTISING)) {
         return;
       }
-      deps.clearCookies();
-      deps.reload();
+      clearKlaviyoCookies();
+      window.location.reload();
     },
-  };
+  });
 };
 
 export interface KlaviyoTrackingConfig {
@@ -136,21 +134,7 @@ export interface KlaviyoTrackingConfig {
   sendStartedCheckout?: boolean;
 }
 
-export interface ActionFinished {
-  token: unknown;
-  input?: any;
-  output?: any;
-  error?: unknown;
-}
-
-export interface KlaviyoTrackingDeps extends Omit<KlaviyoDestinationDeps, 'sendStartedCheckout' | 'load' | 'isLoaded'> {
-  load(companyId: string): void;
-  register(config: KlaviyoDestinationConfig): void;
-  onActionFinished(handler: (args: ActionFinished) => void): void;
-  warn(message: string): void;
-}
-
-export const startKlaviyoTracking = (config: KlaviyoTrackingConfig, deps: KlaviyoTrackingDeps): void => {
+export const startKlaviyoTracking = (config: KlaviyoTrackingConfig): void => {
   if (!config.onsiteTracking) {
     return;
   }
@@ -158,31 +142,24 @@ export const startKlaviyoTracking = (config: KlaviyoTrackingConfig, deps: Klaviy
   // Typed into the Cockpit by hand, so stray spaces are expected.
   const companyId = config.companyId?.trim();
   if (!companyId) {
-    deps.warn('[@laioutr/app-klaviyo] Storefront tracking is on, but no company ID is set. Klaviyo will not load.');
+    console.warn('[@laioutr/app-klaviyo] Storefront tracking is on, but no company ID is set. Klaviyo will not load.');
     return;
   }
 
-  // Owned here because `init` and a newsletter signup can both load the script, and withdrawal has
-  // to stop it either way.
-  let loaded = false;
-  const load = () => {
-    deps.load(companyId);
-    loaded = true;
-  };
+  const consent = useConsentStore();
 
-  deps.register(
-    createKlaviyoDestination({ ...deps, load, isLoaded: () => loaded, sendStartedCheckout: config.sendStartedCheckout ?? false })
-  );
+  useAnalytics().register(createKlaviyoDestination(companyId, config.sendStartedCheckout ?? false));
 
   // `SubscribeAction` runs on the server, so this is the only moment the browser learns who signed up.
-  deps.onActionFinished(({ token, input, output, error }) => {
-    if (token !== SubscribeAction || error || !deps.hasConsent()) {
+  useNuxtApp().hook('orchestr:action:fetch:finally', ({ token, input, output }) => {
+    if (token !== SubscribeAction || !consent.hasPurposeConsent(ADVERTISING)) {
       return;
     }
+    // A failed action leaves `output` empty. The hook's own `error` field is never set.
     if (output?.status !== 'success' && output?.status !== 'already-subscribed') {
       return;
     }
-    load();
-    deps.klaviyo().identify({ email: input.email });
+    ensureKlaviyo(companyId);
+    getKlaviyo().identify({ email: input.email });
   });
 };

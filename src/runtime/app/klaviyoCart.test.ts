@@ -1,30 +1,39 @@
+import { registerEndpoint } from '@nuxt/test-utils/runtime';
+import { createError, readBody } from 'h3';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CART_FETCH_TIMEOUT_MS, fetchCart, KLAVIYO_CART_QUERY, mapCart } from './klaviyoCart';
+import { CART_FETCH_TIMEOUT_MS, fetchCart } from './klaviyoCart';
+import { useOrchestrStore } from '#imports';
+import { cartLine, cartStream, noCartStream } from '../../../test/support/orchestr';
 
-const eur = (amount: number) => ({ amount, currency: 'EUR' });
-const line = (base: object, single = 1999, total = 3998) => ({ components: { base, cost: { single: eur(single), total: eur(total) } } });
-const productLine = line({
-  type: 'product',
-  quantity: 2,
-  title: 'Tee',
+let respond: () => unknown;
+const requests: { queries: { id: string }[] }[] = [];
+
+registerEndpoint('/api/orchestr/query', {
+  method: 'POST',
+  handler: async (event) => {
+    requests.push(await readBody(event));
+    return respond();
+  },
+});
+
+const productLine = cartLine('line-1', {
   code: 'TEE-M',
-  link: { type: 'reference', reference: { type: 'Product', id: 'gid://shopify/Product/123' } },
+  link: { type: 'url', href: 'https://shop.test/p/tee' },
   cover: { sources: [{ src: 'https://cdn.test/tee.jpg' }] },
 });
-const entity = (items: unknown[], checkoutLink?: unknown) => ({
-  components: { base: { totalQuantity: 2, checkoutLink }, cost: { total: eur(3998) } },
-  links: { 'ecommerce/cart/cart-items': { entities: items } },
-});
-const resolveLink = vi.fn((link: any) => (link.type === 'url' ? link.href : '/p/tee'));
-const origin = 'https://shop.test';
 
-describe('mapCart', () => {
-  it('maps product lines, the total and an absolute product URL', () => {
-    expect(mapCart(entity([productLine]), resolveLink, origin)).toStrictEqual({
+beforeEach(() => {
+  requests.length = 0;
+});
+
+describe('fetchCart', () => {
+  it('maps product lines and the total', async () => {
+    respond = () => cartStream([productLine]);
+    expect(await fetchCart()).toStrictEqual({
       value: 39.98,
       items: [
         {
-          ProductID: '123',
+          ProductID: 'TEE-M',
           SKU: 'TEE-M',
           ProductName: 'Tee',
           Quantity: 2,
@@ -37,86 +46,81 @@ describe('mapCart', () => {
     });
   });
 
-  it('excludes discount-code and custom lines', () => {
-    const lines = [
-      productLine,
-      line({ type: 'discount-code', quantity: 1, title: 'SAVE10' }),
-      line({ type: 'custom', quantity: 1, title: 'Gift wrap' }),
-    ];
-    expect(mapCart(entity(lines), resolveLink, origin).items).toHaveLength(1);
+  it('takes the product id from a reference link', async () => {
+    const reference = { type: 'reference', reference: { type: 'Product', id: 'gid://shopify/Product/123', slug: 'tee' } };
+    respond = () => cartStream([cartLine('line-1', { code: 'TEE-M', link: reference })]);
+    expect((await fetchCart())?.items[0]?.ProductID).toBe('123');
   });
 
-  it('falls back to the code when the line has no reference', () => {
-    const noLink = line({ type: 'product', quantity: 1, title: 'Tee', code: 'TEE-M' });
-    expect(mapCart(entity([noLink]), resolveLink, origin).items[0]!.ProductID).toBe('TEE-M');
+  it('excludes discount-code and custom lines', async () => {
+    respond = () =>
+      cartStream([
+        productLine,
+        cartLine('line-2', { type: 'discount-code', title: 'SAVE10' }),
+        cartLine('line-3', { type: 'custom', title: 'Gift wrap' }),
+      ]);
+    expect((await fetchCart())?.items.map((item) => item.ProductName)).toEqual(['Tee']);
   });
 
-  it('keeps an absolute checkout link and makes a relative one absolute', () => {
-    const absolute = { type: 'url', href: 'https://checkout.test/abc' };
-    expect(mapCart(entity([], absolute), resolveLink, origin).checkoutUrl).toBe('https://checkout.test/abc');
-    const relative = { type: 'pageType', pageType: 'checkout' };
-    const toPath = () => '/checkout';
-    expect(mapCart(entity([], relative), toPath, origin).checkoutUrl).toBe('https://shop.test/checkout');
+  it('keeps an absolute checkout link and makes a relative one absolute', async () => {
+    respond = () => cartStream([], { checkoutLink: { type: 'url', href: 'https://checkout.test/abc' } });
+    expect((await fetchCart())?.checkoutUrl).toBe('https://checkout.test/abc');
+
+    respond = () => cartStream([], { checkoutLink: { type: 'url', href: '/checkout' } });
+    const { checkoutUrl } = (await fetchCart())!;
+    expect(new URL(checkoutUrl!).pathname).toBe('/checkout');
   });
 
   it.each([
-    [
-      'throws',
-      () => {
-        throw new Error('unresolvable');
-      },
-    ],
-    ['returns nothing', () => ''],
-    ['returns its in-page fallback', () => '#unknown-route?pageType=checkout'],
-  ])('leaves out a link when the resolver %s', (_name, resolver) => {
-    const lines = [line({ type: 'product', quantity: 1, title: 'Tee', code: 'X', link: { type: 'url', href: 'x' } })];
-    const cart = mapCart(entity(lines, { type: 'url', href: 'x' }), resolver as any, origin);
+    ['cannot be resolved', { type: 'pageType', pageType: 'ecommerce/no-such-page' }],
+    ['points inside the page', { type: 'anchor', fragment: 'top' }],
+  ])('leaves out a link that %s', async (_name, link) => {
+    respond = () => cartStream([cartLine('line-1', { code: 'X', link })], { checkoutLink: link });
+    const cart = await fetchCart();
     expect(cart).not.toHaveProperty('checkoutUrl');
-    expect(cart.items[0]).not.toHaveProperty('ProductURL');
-  });
-});
-
-describe('fetchCart', () => {
-  const orchestr = { invalidateQuery: vi.fn(), executeQueries: vi.fn(), getClientQueryResult: vi.fn() };
-  const deps = { orchestr, resolveLink, origin };
-
-  beforeEach(() => {
-    vi.resetAllMocks();
-    resolveLink.mockImplementation((link: any) => (link.type === 'url' ? link.href : '/p/tee'));
-    orchestr.executeQueries.mockResolvedValue(undefined);
-  });
-  afterEach(() => {
-    vi.useRealTimers();
+    expect(cart?.items[0]).not.toHaveProperty('ProductURL');
   });
 
-  it('uses its own query id and refetches', async () => {
-    orchestr.getClientQueryResult.mockReturnValue({ status: 'ok', entities: [entity([productLine])] });
-    expect((await fetchCart(deps))?.items).toHaveLength(1);
-    expect(KLAVIYO_CART_QUERY.id).toBe('klaviyo-cart');
-    expect(orchestr.invalidateQuery).toHaveBeenCalledWith('klaviyo-cart');
-    expect(orchestr.invalidateQuery.mock.invocationCallOrder[0]).toBeLessThan(orchestr.executeQueries.mock.invocationCallOrder[0]!);
+  it('uses its own query id and refetches, so a later fetch sees the new cart', async () => {
+    respond = () => cartStream([cartLine('line-1', { quantity: 1 })]);
+    expect((await fetchCart())?.items[0]?.Quantity).toBe(1);
+
+    respond = () => cartStream([cartLine('line-1', { quantity: 5 })]);
+    expect((await fetchCart())?.items[0]?.Quantity).toBe(5);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.queries[0]?.id).toBe('klaviyo-cart');
   });
 
-  it.each([
-    ['an error status', { status: 'error' }],
-    ['no entity', { status: 'ok', entities: [] }],
-  ])('returns undefined on %s', async (_name, result) => {
-    orchestr.getClientQueryResult.mockReturnValue(result);
-    expect(await fetchCart(deps)).toBeUndefined();
+  it('returns undefined when there is no cart', async () => {
+    respond = noCartStream;
+    expect(await fetchCart()).toBeUndefined();
   });
 
-  it('returns undefined when the query rejects', async () => {
-    orchestr.executeQueries.mockRejectedValue(new Error('network'));
-    expect(await fetchCart(deps)).toBeUndefined();
+  it('returns undefined when the server fails', async () => {
+    respond = () => {
+      throw createError({ statusCode: 500 });
+    };
+    expect(await fetchCart()).toBeUndefined();
   });
 
-  it('gives up and aborts after the limit', async () => {
-    vi.useFakeTimers();
-    orchestr.executeQueries.mockReturnValue(new Promise(() => {}));
-    const pending = fetchCart(deps);
-    await vi.advanceTimersByTimeAsync(CART_FETCH_TIMEOUT_MS);
-    expect(CART_FETCH_TIMEOUT_MS).toBe(3000);
-    expect(await pending).toBeUndefined();
-    expect((orchestr.executeQueries.mock.calls[0]![1] as AbortSignal).aborted).toBe(true);
+  describe('when the server does not answer', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it('gives up and aborts after the limit', async () => {
+      respond = () => new Promise(() => {});
+      const execute = vi.spyOn(useOrchestrStore(), 'executeQueries');
+      vi.useFakeTimers();
+
+      const pending = fetchCart();
+      await vi.advanceTimersByTimeAsync(CART_FETCH_TIMEOUT_MS);
+
+      expect(CART_FETCH_TIMEOUT_MS).toBe(3000);
+      expect(await pending).toBeUndefined();
+      expect(execute.mock.calls[0]![1]?.aborted).toBe(true);
+    });
   });
 });

@@ -1,23 +1,12 @@
-import { Money } from '@screeny05/ts-money';
+import { Money as TsMoney } from '@screeny05/ts-money';
+import type { AddToCart, BeginCheckout, ViewItem } from '@laioutr-core/canonical-types/analytics';
+import type { AnalyticsEventTokenPayloadOf } from '@laioutr-core/core-types/analytics';
+import type { Money } from '@laioutr-core/core-types/common';
 
-export interface MoneyLike {
-  amount: number;
-  currency: string;
-}
-
-/** The fields of a canonical analytics product this app reads. */
-export interface EventProduct {
-  productId: string;
-  sku?: string;
-  name?: string;
-  brand?: string;
-  price?: MoneyLike;
-  listPrice?: MoneyLike;
-  quantity?: number;
-  url?: string;
-  imageUrl?: string;
-  category?: string[];
-}
+export type ViewItemPayload = AnalyticsEventTokenPayloadOf<typeof ViewItem>;
+export type AddToCartPayload = AnalyticsEventTokenPayloadOf<typeof AddToCart>;
+export type BeginCheckoutPayload = AnalyticsEventTokenPayloadOf<typeof BeginCheckout>;
+type EventProduct = ViewItemPayload['product'];
 
 export interface KlaviyoItem {
   ProductID?: string;
@@ -48,9 +37,9 @@ export const plainId = (value: string): string => {
   return value.split('?')[0]!.split('/').pop() || value;
 };
 
-export const toMajor = (money: MoneyLike): number => Money.from(money).toDecimal();
+export const toMajor = (money: Money): number => TsMoney.from(money).toDecimal();
 
-const toMajorOptional = (money: MoneyLike | undefined): number | undefined => (money ? toMajor(money) : undefined);
+const toMajorOptional = (money: Money | undefined): number | undefined => (money ? toMajor(money) : undefined);
 
 const isEmpty = (value: unknown): boolean => {
   if (value === undefined) {
@@ -86,10 +75,9 @@ const toItem = (product: EventProduct): KlaviyoItem => {
 const toItemNames = (items: KlaviyoItem[]): string[] =>
   items.map((item) => item.ProductName).filter((name): name is string => name !== undefined);
 
-export const mapViewedProduct = (payload: {
-  product: EventProduct;
-  value?: MoneyLike;
-}): { viewedProduct: Record<string, unknown>; viewedItem: Record<string, unknown> } => {
+export const mapViewedProduct = (
+  payload: ViewItemPayload
+): { viewedProduct: Record<string, unknown>; viewedItem: Record<string, unknown> } => {
   const { product } = payload;
   const productId = plainId(product.productId);
   // The event's value is the selected variant's price. The product's own is the default variant's.
@@ -123,7 +111,7 @@ export const mapViewedProduct = (payload: {
  * The event's value belongs to the variant actually added, while the product's own price may be the
  * default variant's. The value only divides cleanly when the event holds one product.
  */
-const addedItemPrice = ({ products, value }: { products: EventProduct[]; value: MoneyLike }): number | undefined => {
+const addedItemPrice = ({ products, value }: AddToCartPayload): number | undefined => {
   const added = products[0];
   if (products.length === 1 && added?.quantity && added.quantity > 0) {
     // In minor units, because dividing decimals drifts: 0.15 / 3 is 0.049999999999999996.
@@ -132,7 +120,7 @@ const addedItemPrice = ({ products, value }: { products: EventProduct[]; value: 
   return toMajorOptional(added?.price);
 };
 
-export const mapAddedToCart = (payload: { products: EventProduct[]; value: MoneyLike }, cart?: KlaviyoCart): Record<string, unknown> => {
+export const mapAddedToCart = (payload: AddToCartPayload, cart?: KlaviyoCart): Record<string, unknown> => {
   const added = payload.products[0];
   // No product lines means the add has not landed yet, so the cart would understate the event.
   const cartItems = cart?.items.length ? cart.items : undefined;
@@ -154,11 +142,7 @@ export const mapAddedToCart = (payload: { products: EventProduct[]; value: Money
   });
 };
 
-export const mapStartedCheckout = (
-  eventId: string,
-  payload: { products: EventProduct[]; value: MoneyLike },
-  checkoutUrl?: string
-): Record<string, unknown> => {
+export const mapStartedCheckout = (eventId: string, payload: BeginCheckoutPayload, checkoutUrl?: string): Record<string, unknown> => {
   const items = payload.products.map(toItem);
 
   return compact({

@@ -14,11 +14,13 @@ declare global {
 
 const SCRIPT_SELECTOR = 'script[src*="static.klaviyo.com/onsite/js/"]';
 
+export const isKlaviyoLoaded = (): boolean => document.querySelector(SCRIPT_SELECTOR) !== null;
+
 /** Safe to call repeatedly. Klaviyo warns that a second copy of the script can break tracking. */
 export const ensureKlaviyo = (companyId: string): void => {
   installKlaviyoQueue();
 
-  if (document.querySelector(SCRIPT_SELECTOR)) {
+  if (isKlaviyoLoaded()) {
     return;
   }
 
@@ -31,13 +33,18 @@ export const ensureKlaviyo = (companyId: string): void => {
 /** Read on every call, because klaviyo.js may replace the queue's object when it loads. */
 export const getKlaviyo = (): KlaviyoClient => window.klaviyo!;
 
+/** Every domain a cookie for this host could sit on. A bare TLD cannot hold one. */
+export const klaviyoCookieDomains = (hostname: string): string[] => {
+  const labels = hostname.split('.');
+  return labels.slice(0, -1).map((_label, index) => labels.slice(index).join('.'));
+};
+
 /** The cookie's domain is Klaviyo's choice, so it is expired on the host and every parent domain. */
 export const clearKlaviyoCookies = (): void => {
   const expired = '__kla_id=; Max-Age=0; path=/';
   document.cookie = expired;
 
-  const labels = window.location.hostname.split('.');
-  for (let index = 0; index < labels.length - 1; index++) {
-    document.cookie = `${expired}; domain=${labels.slice(index).join('.')}`;
+  for (const domain of klaviyoCookieDomains(window.location.hostname)) {
+    document.cookie = `${expired}; domain=${domain}`;
   }
 };

@@ -1,5 +1,7 @@
 # Klaviyo Onsite Tracking Implementation Plan
 
+> **Superseded in part.** The dependency objects this plan describes (`KlaviyoDestinationDeps`, `CartFetchDeps`) break `.claude/rules/nuxt-testing-over-abstraction.md` and were removed after it ran. The spec describes the code as it is.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Load `klaviyo.js` after consent and send Viewed Product, Added to Cart (with the whole cart) and optionally Started Checkout from canonical events, using only `@laioutr/app-klaviyo`.
