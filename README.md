@@ -19,6 +19,12 @@ Implements the following canonical actions:
 
 - [`newsletter/subscribe`](https://docs.laioutr.io/canonical-types/newsletter/canonical-actions) Newsletter registration action
 
+It also loads Klaviyo's script on the storefront for visitors who accept marketing cookies. That enables Klaviyo forms, identifies logged-in customers and newsletter sign-ups, and sends these canonical events to Klaviyo:
+
+- `ecommerce/view_item` as Viewed Product
+- `ecommerce/add_to_cart` as Added to Cart, with the whole cart
+- `ecommerce/begin_checkout` as Started Checkout, when `sendStartedCheckout` is on
+
 ## Quick Setup
 
 Before installing dependencies, you need to create a copy of the `.npmrc.config` file called `.npmrc` and fill in the `NPM_LAIOUTR_TOKEN` with your npm token. You can find this token in your [project settings](https://cockpit.laioutr.cloud/o/_/p/_/settings).
@@ -31,6 +37,31 @@ Before installing dependencies, you need to create a copy of the `.npmrc.config`
 That's it! You can now use Klaviyo in your [Laioutr Frontend](https://laioutr.com) ✨
 
 You can find a thorough guide on getting started with Laioutr development in our [developer guide](https://docs.laioutr.io/developer-guide/setup).
+
+## Storefront tracking
+
+Tracking is on by default. Turn it off with the `onsiteTracking` setting in the Cockpit. Klaviyo's own integrations send orders, so this app needs no private API key.
+
+### All shops
+
+- A consent app is required. Consent defaults to denied, so without one Klaviyo never loads.
+- List Klaviyo as a marketing cookie in the cookie banner. The app requires the `advertising` consent purpose, and forms follow the same rule as tracking.
+
+### Shopify
+
+- Keep Klaviyo's Shopify integration connected. It sends Placed Order and Checkout Started, so leave `sendStartedCheckout` off.
+- Check that nothing else loads `klaviyo.js`. Klaviyo warns that a second copy can break tracking.
+- Ask Klaviyo support to point catalog URLs at the storefront domain instead of `myshopify.com`.
+
+### Shopware
+
+- Install Klaviyo's Shopware extension with order metrics on and onsite metrics off, and connect one sales channel.
+- Turn on `sendStartedCheckout`.
+
+Two limits apply on Shopware:
+
+- A first-time guest who abandons in the checkout frame gets no email, because this app cannot see the address they type there. Logged-in customers and visitors Klaviyo already knows are unaffected.
+- The cart's checkout link points at the checkout page, so an email link may not restore the cart, for example on another device.
 
 ## Publishing
 

@@ -8,13 +8,13 @@
     "sections": [
       {
         "label": "Account",
-        "description": "The Klaviyo account this environment's storefront sends newsletter sign-ups to.",
+        "description": "The Klaviyo account this environment's storefront sends newsletter sign-ups and visitor activity to.",
         "fields": [
           {
             "name": "companyId",
             "type": "text",
             "label": "Public API key (company ID)",
-            "description": "Klaviyo → Settings → Account → API keys, the six-character public key. Without it, sign-ups cannot reach Klaviyo.",
+            "description": "Klaviyo → Settings → Account → API keys, the six-character public key. Without it, sign-ups and storefront tracking cannot reach Klaviyo.",
             "placeholder": "AbC123",
             "required": true
           },
@@ -32,6 +32,26 @@
             "description": "The Klaviyo API the storefront calls. Leave the default unless Klaviyo gives you another one.",
             "placeholder": "https://a.klaviyo.com",
             "default": "https://a.klaviyo.com"
+          }
+        ]
+      },
+      {
+        "label": "Storefront tracking",
+        "description": "What the storefront sends to Klaviyo from the visitor's browser, once they have accepted marketing cookies.",
+        "fields": [
+          {
+            "name": "onsiteTracking",
+            "type": "checkbox",
+            "label": "Track visitors on the storefront",
+            "default": true,
+            "description": "Loads Klaviyo's script for visitors who accept marketing cookies, which enables Klaviyo forms, Viewed Product and Added to Cart. Needs a consent app. Newsletter sign-ups work either way."
+          },
+          {
+            "name": "sendStartedCheckout",
+            "type": "checkbox",
+            "label": "Send Started Checkout from the storefront",
+            "default": false,
+            "description": "Turn this on for Shopware. Leave it off for Shopify, where Klaviyo's Shopify integration already sends Checkout Started."
           }
         ]
       }
